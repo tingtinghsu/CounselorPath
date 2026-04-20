@@ -155,8 +155,74 @@ body {
   flex: 1;
   padding: 40px 48px;
   max-width: 860px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
+
+/* ── Right Sidebar (TOC) ── */
+.toc-sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-left: 1px solid var(--border);
+  padding: 20px 0;
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+}
+
+.toc-title {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc-item {
+  margin: 0;
+}
+
+.toc-link {
+  display: block;
+  padding: 6px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  line-height: 1.4;
+  transition: all .2s;
+}
+
+.toc-link:hover {
+  background: rgba(0,0,0,.04);
+  color: var(--text);
+}
+
+.toc-link.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 500;
+}
+
+.toc-level-1 { padding-left: 20px; }
+.toc-level-2 { padding-left: 40px; }
+.toc-level-3 { padding-left: 60px; }
+.toc-level-4 { padding-left: 80px; }
+
+/* ── Scrollbar ── */
+.toc-sidebar::-webkit-scrollbar { width: 4px; }
+.toc-sidebar::-webkit-scrollbar-track { background: transparent; }
+.toc-sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 
 .note-title-bar {
   margin-bottom: 32px;
@@ -275,6 +341,10 @@ body {
       <p>從左側選擇筆記開始複習</p>
     </div>
   </main>
+  <aside class="toc-sidebar" id="tocSidebar">
+    <div class="toc-title">📑 目錄</div>
+    <ul class="toc-list" id="tocList"></ul>
+  </aside>
 </div>
 
 <script>
@@ -391,7 +461,15 @@ function loadNote(filename, subjectId, subjectName) {
   if (link) link.classList.add("active");
 
   const md = NOTES_CONTENT[filename] || "（筆記內容載入失敗）";
-  const html = marked.parse(md);
+  let html = marked.parse(md);
+
+  // Add IDs to headings for TOC navigation
+  const headingRegex = /<h([1-6])(.*?)>(.*?)<\/h\1>/g;
+  let headingId = 0;
+  html = html.replace(headingRegex, (match, level, attrs, content) => {
+    const id = `heading-${headingId++}`;
+    return `<h${level} id="${id}"${attrs}>${content}</h${level}>`;
+  });
 
   document.getElementById("main").innerHTML = `
     <div class="note-title-bar">
@@ -408,9 +486,73 @@ function loadNote(filename, subjectId, subjectName) {
   `;
   window.scrollTo(0, 0);
 
+  // Generate TOC from headings
+  generateTOC(md);
+
   // Store current note md for mind map rendering
   window._currentNoteMd = md;
   window._mindmapRendered = false;
+}
+
+// Generate table of contents from markdown headings
+function generateTOC(mdContent) {
+  const headingRegex = /^(#{1,6})\s+(.+)$/gm;
+  const headings = [];
+  let match;
+
+  while ((match = headingRegex.exec(mdContent)) !== null) {
+    const level = match[1].length;
+    const text = match[2].trim();
+    headings.push({ level, text });
+  }
+
+  const tocList = document.getElementById("tocList");
+  tocList.innerHTML = "";
+
+  headings.forEach((heading, index) => {
+    const li = document.createElement("li");
+    li.className = "toc-item";
+
+    const a = document.createElement("a");
+    a.className = `toc-link toc-level-${heading.level}`;
+    a.textContent = heading.text;
+    a.href = `#heading-${index}`;
+    a.onclick = (e) => {
+      e.preventDefault();
+      const target = document.getElementById(`heading-${index}`);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        updateActiveTOC();
+      }
+    };
+
+    li.appendChild(a);
+    tocList.appendChild(li);
+  });
+
+  // Update active TOC item on scroll
+  document.getElementById("main").addEventListener("scroll", updateActiveTOC);
+}
+
+// Update active TOC item based on current scroll position
+function updateActiveTOC() {
+  const headings = document.querySelectorAll("[id^='heading-']");
+  const tocLinks = document.querySelectorAll(".toc-link");
+
+  tocLinks.forEach(link => link.classList.remove("active"));
+
+  let activeIndex = 0;
+  for (let i = headings.length - 1; i >= 0; i--) {
+    const heading = headings[i];
+    if (heading.getBoundingClientRect().top <= 100) {
+      activeIndex = i;
+      break;
+    }
+  }
+
+  if (tocLinks[activeIndex]) {
+    tocLinks[activeIndex].classList.add("active");
+  }
 }
 
 function toggleMindMap() {
