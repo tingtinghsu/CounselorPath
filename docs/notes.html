@@ -329,6 +329,8 @@ body {
 .sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 </head>
 <body>
 
@@ -471,8 +473,31 @@ function loadNote(filename, subjectId, subjectName) {
   const link = document.querySelector(`.note-link[data-filename="${filename}"]`);
   if (link) link.classList.add("active");
 
-  const md = NOTES_CONTENT[filename] || "（筆記內容載入失敗）";
+  let md = NOTES_CONTENT[filename] || "（筆記內容載入失敗）";
+
+  // Protect math formulas from marked.js, then render with KaTeX
+  const mathStore = new Map();
+  let mathCounter = 0;
+  md = md.replace(/\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$/g, (match) => {
+    const key = `XMATHX${mathCounter++}XMATHX`;
+    mathStore.set(key, match);
+    return key;
+  });
+
   let html = marked.parse(md);
+
+  // Replace placeholders with KaTeX-rendered HTML
+  mathStore.forEach((formula, key) => {
+    const isDisplay = formula.startsWith('$$');
+    const inner = isDisplay ? formula.slice(2, -2) : formula.slice(1, -1);
+    let rendered;
+    try {
+      rendered = katex.renderToString(inner, { displayMode: isDisplay, throwOnError: false });
+    } catch (e) {
+      rendered = formula;
+    }
+    html = html.replace(new RegExp(key, 'g'), rendered);
+  });
 
   // Add IDs to headings for TOC navigation
   const headingRegex = /<h([1-6])(.*?)>(.*?)<\/h\1>/g;
@@ -495,6 +520,7 @@ function loadNote(filename, subjectId, subjectName) {
       <div class="mindmap-wrap" id="mindmap-wrap" style="display:none;"></div>
     </div>
   `;
+
   window.scrollTo(0, 0);
 
   // Generate TOC from headings
