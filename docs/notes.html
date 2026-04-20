@@ -643,6 +643,17 @@ buildSidebar();
 // Auto-open first subject and load first note
 if (SIDEBAR_DATA.length > 0) {
   toggleSubject(SIDEBAR_DATA[0].id);
+
+  // Auto-expand all categories in the education subject
+  const educationSubj = SIDEBAR_DATA.find(s => s.id === "education");
+  if (educationSubj && educationSubj.categories) {
+    educationSubj.categories.forEach(cat => {
+      const catNotes = document.getElementById(`cat-${cat.id}`);
+      const toggle = document.querySelector(`#cat-${cat.id}`).previousElementSibling?.querySelector(".category-toggle");
+      if (catNotes) catNotes.classList.add("open");
+      if (toggle) toggle.textContent = "▼";
+    });
+  }
 }
 if (FIRST_NOTE) {
   // Find first note in either direct notes or nested categories
