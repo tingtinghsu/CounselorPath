@@ -1,4 +1,5 @@
 .env
+.DS_Store
 study_site/
 01-mov/
 02-txt/
@@ -6,7 +7,3 @@ study_site/
 04-mp3/
 __pycache__/
 *.pyc
-convert_to_mp3.py
-make_notes.py
-transcribe.py
-plan.md
