@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>諮商所備考筆記</title>
+<script>
+// Authentication check - redirect to login if not authenticated
+if (localStorage.getItem('counselorPathAuth') !== 'true') {
+  window.location.href = './index.html';
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/markmap-autoloader@0.17.0"></script>
+<style>
+:root {
+  --sidebar-width: 280px;
+  --header-height: 56px;
+  --accent: #2869e6;
+  --accent-light: #e8f0fe;
+  --sidebar-bg: #f8f9fa;
+  --border: #e1e4e8;
+  --text: #24292e;
+  --text-muted: #586069;
+  --code-bg: #f6f8fa;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: #fff;
+}
+
+/* ── Login ── */
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.login-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 48px 40px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+  max-width: 360px;
+  width: 100%;
+}
+
+.login-box h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: var(--text);
+  border: none !important;
+}
+
+.login-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.login-form-group {
+  margin-bottom: 16px;
+}
+
+.login-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.login-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.login-btn:hover {
+  background: #1a56d4;
+}
+
+.login-error {
+  color: #d32f2f;
+  font-size: 12px;
+  margin-top: 8px;
+  display: none;
+}
+
+.login-error.show {
+  display: block;
+}
+
+.login-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Header ── */
+.header {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--header-height);
+  background: var(--accent);
+  display: flex; align-items: center; padding: 0 20px;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.header h1 {
+  color: #fff; font-size: 18px; font-weight: 600; letter-spacing: .3px;
+}
+.header-sub {
+  color: rgba(255,255,255,.75); font-size: 13px; margin-left: 12px;
+}
+
+/* ── Layout ── */
+.layout {
+  display: flex;
+  margin-top: var(--header-height);
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+}
+
+.sidebar-subject {
+  margin-bottom: 6px;
+}
+.sidebar-subject-header {
+  display: flex; align-items: center;
+  padding: 8px 20px;
+  cursor: pointer;
+  user-select: none;
+  gap: 8px;
+}
+.sidebar-subject-header:hover { background: rgba(0,0,0,.04); }
+
+.subject-icon {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.subject-label { flex: 1; }
+.subject-name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  display: block; line-height: 1.2;
+}
+.subject-sub {
+  font-size: 11px; color: var(--text-muted); display: block;
+}
+.subject-toggle {
+  font-size: 10px; color: var(--text-muted);
+  transition: transform .2s;
+}
+.sidebar-subject.open .subject-toggle { transform: rotate(90deg); }
+
+.sidebar-notes {
+  display: none; padding: 0 0 4px 0;
+}
+.sidebar-subject.open .sidebar-notes { display: block; }
+
+.note-link {
+  display: block; padding: 6px 20px 6px 56px;
+  font-size: 13px; color: var(--text-muted);
+  text-decoration: none; cursor: pointer;
+  border-left: 3px solid transparent;
+  line-height: 1.4;
+}
+.note-link:hover { background: rgba(0,0,0,.04); color: var(--text); }
+.note-link.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-left-color: var(--accent);
+  font-weight: 500;
+}
+.note-date {
+  display: block; font-size: 11px; color: #999; margin-top: 1px;
+}
+
+/* ── Main Content ── */
+.main {
+  flex: 1;
+  padding: 40px 48px;
+  max-width: 860px;
+  overflow: hidden;
+}
+
+.note-title-bar {
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.note-subject-tag {
+  display: inline-block;
+  padding: 2px 10px; border-radius: 12px;
+  font-size: 12px; font-weight: 500; margin-bottom: 8px;
+}
+
+/* ── Markdown Styles ── */
+.content h1 { font-size: 26px; margin: 32px 0 16px; line-height: 1.3; }
+.content h2 { font-size: 20px; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.content h3 { font-size: 16px; margin: 20px 0 8px; }
+.content h4 { font-size: 14px; margin: 16px 0 6px; }
+.content p  { margin: 10px 0; line-height: 1.8; font-size: 15px; }
+.content ul, .content ol { margin: 8px 0 8px 24px; }
+.content li { margin: 4px 0; line-height: 1.7; font-size: 15px; }
+.content li > ul { margin-top: 4px; }
+
+.content table {
+  border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px;
+}
+.content th {
+  background: var(--code-bg); padding: 8px 12px;
+  border: 1px solid var(--border); font-weight: 600; text-align: left;
+}
+.content td {
+  padding: 8px 12px; border: 1px solid var(--border);
+}
+.content tr:nth-child(even) td { background: #fafafa; }
+
+.content code {
+  background: var(--code-bg); padding: 2px 6px; border-radius: 3px;
+  font-size: 13px; font-family: "SFMono-Regular", Consolas, monospace;
+}
+.content pre {
+  background: var(--code-bg); padding: 16px; border-radius: 6px;
+  overflow-x: auto; margin: 12px 0; border: 1px solid var(--border);
+}
+.content pre code { background: none; padding: 0; font-size: 13px; }
+
+.content blockquote {
+  border-left: 4px solid var(--accent); padding: 4px 16px;
+  margin: 12px 0; color: var(--text-muted); background: var(--accent-light);
+  border-radius: 0 4px 4px 0;
+}
+
+.content strong { font-weight: 600; }
+.content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ── Subject Colors ── */
+.education  { background: #e3f2fd; color: #1565c0; }
+.psychology { background: #f3e5f5; color: #6a1b9a; }
+.counseling { background: #e8f5e9; color: #2e7d32; }
+.english    { background: #fff3e0; color: #e65100; }
+.uncategorized { background: #f5f5f5; color: #616161; }
+
+.icon-education  { background: #bbdefb; }
+.icon-psychology { background: #e1bee7; }
+.icon-counseling { background: #c8e6c9; }
+.icon-english    { background: #ffe0b2; }
+.icon-uncategorized { background: #eeeeee; }
+
+/* ── Empty state ── */
+.empty {
+  text-align: center; padding: 80px 40px;
+  color: var(--text-muted);
+}
+.empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+/* ── Mind Map ── */
+.mindmap-section {
+  margin-top: 48px;
+  border-top: 2px dashed var(--border);
+  padding-top: 32px;
+}
+.mindmap-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.mindmap-header h2 {
+  font-size: 18px; font-weight: 600; border: none !important; margin: 0 !important; padding: 0 !important;
+}
+.mindmap-toggle {
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px; padding: 6px 14px;
+  font-size: 13px; cursor: pointer; font-weight: 500;
+}
+.mindmap-toggle:hover { background: #1a56d4; }
+.mindmap-wrap {
+  border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; background: #fafeff;
+}
+.mindmap-wrap svg { display: block; }
+
+/* ── Scrollbar ── */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <h2>📚 諮商所備考筆記</h2>
+    <p class="login-subtitle">請輸入密碼以訪問筆記</p>
+    <form onsubmit="handleLogin(event)">
+      <div class="login-form-group">
+        <label class="login-label" for="password">密碼</label>
+        <input type="password" id="password" class="login-input" placeholder="輸入密碼" autofocus>
+        <div class="login-error" id="loginError">密碼錯誤</div>
+      </div>
+      <button type="submit" class="login-btn">登入</button>
+    </form>
+  </div>
+</div>
+
+<header class="header">
+  <h1>📚 諮商所備考筆記</h1>
+  <span class="header-sub">研究所入學考試 · 上課筆記整理</span>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar"></nav>
+  <main class="main" id="main">
+    <div class="empty">
+      <div class="empty-icon">📖</div>
+      <p>從左側選擇筆記開始複習</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const SIDEBAR_DATA  = [{"id": "education", "name": "教育研究法", "sub": "統計・測驗・研究法", "notes": [{"filename": "2026-04-20 13-01-21-量化研究方法.md", "title": "📘 研究方法｜上課整理筆記（量化研究＋描述性研究）", "date": "2026-04-20"}]}, {"id": "counseling", "name": "輔導原理", "sub": "", "notes": [{"filename": "2026-04-18 18-27-29.md", "title": "諮商所入學考試備考筆記", "date": "2026-04-18"}, {"filename": "2026-04-18 18-35-49.md", "title": "敘事治療備考筆記", "date": "2026-04-18"}, {"filename": "2026-04-18 18-54-25.md", "title": "合作語言取向 (Linguistic Approach) 備考筆記", "date": "2026-04-18"}, {"filename": "2026-04-18 19-15-07.md", "title": "自我探索與導師的影響", "date": "2026-04-18"}, {"filename": "2026-04-18 20-58-14.md", "title": "精神分析理論備考筆記", "date": "2026-04-18"}, {"filename": "2026-04-18 21-40-31-樊老師11mins.md", "title": "課題關係理論與心理分析", "date": "2026-04-18"}]}];
+const NOTES_CONTENT = {"2026-04-20 13-01-21-量化研究方法.md": "# 📘 研究方法｜上課整理筆記（量化研究＋描述性研究）\n\n## 一、研究方法這門課的本質\n\n### 1️⃣ 為什麼覺得難（很正常）\n\n- 範圍「包山包海」，且方法持續演進\n- 看完一輪仍「半懂不懂」是常態\n- 甚至教授也不一定敢說完全掌握\n\n> 👉 重點不是全懂，而是建立「**結構感 + 可作答能力**」\n\n### 2️⃣ 為什麼一定要學好\n\n- ✏️ 考試會出「迷你研究計畫」（很常見）\n- 📄 推甄備審／Proposal 必備\n- 🔗 能串聯四大科：\n  - 心理學\n  - 統計\n  - 測驗\n  - 研究法\n\n> 👉 核心：**量化研究法是整合樞紐**\n\n---\n\n## 二、考試重點題型（超重要）\n\n### 🧠 典型大題（30 分）\n\n> **設計一個心理諮商相關研究**\n\n你要寫出：\n\n1. 研究題目\n2. 動機\n3. 研究目的\n4. 研究問題\n5. 研究方法（最關鍵）\n\n> 👉 卡關點通常在：**研究方法怎麼寫**\n\n---\n\n## 三、關鍵觀念：研究設計 vs 資料分析（必考）\n\n### ❌ 常見錯誤\n\n把統計方法當成研究設計：\n\n- t-test\n- ANOVA\n- 回歸\n\n> 👉 這些是「**資料分析**」，不是研究設計\n\n### ✅ 正確區分\n\n| 層級 | 內容 |\n|------|------|\n| 研究設計 | 描述性 / 相關 / 實驗 |\n| 資料分析 | t-test / ANOVA / 回歸 |\n\n> 👉 一句話記：\n> **「怎麼做研究」≠「怎麼分析資料」**\n\n---\n\n## 四、量化研究三大類（核心架構）\n\n### 1️⃣ 描述性研究（Descriptive）\n\n> 👉 只描述現象，不談關係\n\n**例子：**\n\n- 滑手機比例\n- 上課專心比例\n- 詞彙使用率\n\n**特徵：**\n\n- 單一變項\n- 不探討因果或關聯\n\n**統計方法：**\n\n- 平均數\n- 比例\n- 標準差\n- 次數分配\n\n### 2️⃣ 相關研究（Correlational）\n\n> 👉 探討「**有沒有關係**」\n\n**例子：**\n\n- 睡眠時間 vs 成績\n\n**重點：**\n\n- ❗ 不談因果\n- 只看「是否一起變動」\n\n**統計方法：**\n\n- 相關係數\n- 回歸分析\n- 中介 / 調節\n\n### 3️⃣ 實驗研究（Experimental）\n\n> 👉 探討「**因果關係**」\n\n**關鍵：**\n\n- 操弄自變項\n- 控制干擾變項\n\n**例子：**\n\n- 冷氣溫度 → 專心程度\n\n**統計方法：**\n\n- t-test\n- ANOVA\n\n### 🔥 一句話統整\n\n| 類型 | 問題 |\n|------|------|\n| 描述 | 是什麼 |\n| 相關 | 有沒有關 |\n| 實驗 | 會不會影響 |\n\n---\n\n## 五、描述性研究（一）：調查法\n\n### 1️⃣ 定義\n\n蒐集：\n\n- 行為\n- 態度\n- 意見\n- 信念\n\n> 👉 重點：**仍然不探討關係**\n\n### 2️⃣ 抽樣（重要）\n\n- **隨機抽樣**（最佳）\n  - 簡單隨機\n  - 分層\n  - 叢集\n  - 系統\n\n> 👉 調查研究「**非常重視代表性**」\n\n### 3️⃣ 資料收集方式\n\n#### （1）問卷\n\n- 網路問卷（最常見）\n- 可能有「抽樣偏誤」\n\n> 👉 例：只在特定社群發 → 樣本偏差\n\n#### （2）訪談\n\n**類型：**\n\n- 面對面（有社會期許偏誤）\n- 電話（較少）\n- 焦點團體（會有團體極化）\n\n### ⚠️ 重要偏誤\n\n- **社會期許偏誤** → 回答「看起來比較好」的答案\n\n---\n\n## 六、問卷設計原則（高頻考點）\n\n### 🔥 必背重點\n\n#### 1️⃣ 避免引導性問題\n\n- ❌「血汗錢給政府？」\n- ✅「是否支持提高稅率？」\n\n#### 2️⃣ 不要雙重問題\n\n- ❌ 同時問兩件事\n\n#### 3️⃣ 不要雙重否定\n\n- ❌「是否不同意不…」\n\n#### 4️⃣ 選項要「互斥＋窮盡」\n\n- ❌ 2 萬-3 萬 / 3 萬-10 萬（重疊）\n- ✅ 明確區間\n\n#### 5️⃣ 基本資料放最後\n\n> 👉 避免防衛／偏誤\n\n#### 6️⃣ 問卷要友善\n\n- 不要太複雜\n- 減少跳題\n\n---\n\n## 七、描述性研究（二）：觀察法\n\n### 1️⃣ 定義\n\n> 👉 **不問人，直接觀察行為**\n\n### 2️⃣ 優點\n\n- 減少社會期許偏誤\n- 更接近真實行為\n\n### 3️⃣ 分類\n\n#### （1）結構式 vs 非結構式\n\n| 類型 | 特徵 |\n|------|------|\n| 結構式 | 有明確觀察指標（可量化） |\n| 非結構式 | 開放觀察（偏質性） |\n\n#### （2）介入 vs 非介入\n\n| 類型 | 說明 |\n|------|------|\n| 有介入 | 研究者進入情境 |\n| 無介入 | 完全旁觀 |\n\n#### （3）情境\n\n| 類型 | 說明 |\n|------|------|\n| 自然情境 | 真實環境 |\n| 人為情境 | 實驗室 |\n\n---\n\n## 八、觀察研究關鍵技術\n\n### 1️⃣ 抽樣方式\n\n- **時間抽樣**（抽時間段）\n- **事件抽樣**（特定事件）\n\n### 2️⃣ 資料紀錄（量化關鍵）\n\n- 次數\n- 時間\n- 有 / 無\n\n> 👉 一定要能轉成數字\n\n---\n\n## 九、觀察研究的誤差（超重要）\n\n### 1️⃣ 被觀察者效應\n\n> 👉 被觀察 → 行為改變\n\n### 2️⃣ 觀察者偏誤\n\n- 預設立場（偏見）\n- 光環效應\n- 寬大 / 嚴格誤差\n- 中央趨勢\n\n### 3️⃣ 信度問題（考試會考）\n\n> 👉 多觀察者需一致\n\n**方法：**\n\n- 相關係數（連續資料）\n- 一致比例（簡單）\n- Kappa（進階）\n\n---\n\n## 十、考試策略（很關鍵）\n\n### 🧠 心態技巧（老師強調）\n\n**❌ 扣分思維：**\n\n- 我這題錯了\n- 我又少 5 分\n\n**✅ 加分思維：**\n\n- 這題我拿 2 分\n- 這題我至少 25 分\n\n> 👉 影響表現很大（**自我應驗預言**）\n\n---\n\n## 🎯 最後幫你收斂一個核心框架\n\n### ✨ 研究法作答模板（超重要）\n\n當你遇到研究題：\n\n1. 題目\n2. 動機\n3. 目的\n4. 研究問題\n5. 研究設計（描述 / 相關 / 實驗）\n6. 抽樣\n7. 工具（問卷 / 觀察）\n8. 資料分析\n\n\n## 主要章節\n\n### 一、量化研究概述\n- **定義**：量化研究以數據為基礎進行，透過統計方法分析結果。\n- **預測題型**：選擇題/解釋名詞 5-10分 / 申論題 25分  \n- **學校考試偏好**：北師、實踐、師大\n\n### 二、研究設計類型\n| 類型         | 定義                                   | 特徵                                    | 常用統計方法                  |\n|--------------|----------------------------------------|-----------------------------------------|-------------------------------|\n| 描述性研究   | 觀察特定現象，無變數間關聯性        | 只描述數據，不探究關聯                 | 敘述統計、單變數假設檢定    |\n| 相關研究     | 探討變數間的關係                     | 不操控變數，僅觀察變數之間的相關性    | 相關計算、回歸分析          |\n| 實驗研究     | 操控自變數以觀察其對依變數的影響    | 控制環境，隨機分配                      | ANOVA、T檢定等              |\n\n🧠 記憶法：**描述的事，相關的兩，實驗操控依變！**\n\n### 三、描述性研究\n- **定義**：描述某一特定群體之行為、知識、信念等，無需探討其間關聯性。\n- **方法**：調查法（問卷、訪談）與觀察法。\n- **預測題型**：選擇題。\n\n### 四、相關研究\n- **定義**：探討兩個變數間的關聯性，但不操控變數。\n- **預測題型**：選擇題/申論題 25分。\n\n### 五、實驗研究\n- **定義**：研究者操控自變數以觀察其對依變數的影響。\n- **程序**：\n  1. 隨機分配參與者。\n  2. 控制混淆變數。\n  3. 收集數據。\n- **預測題型**：選擇題/申論題 25分。\n\n### 六、調查研究方法\n- **調查方法**：\n  - **問卷調查**：使用量化問題，需確保問題不具引導性。\n  - **訪談法**：用口頭詢問，得知參與者的意見。\n\n💡 **申論用**：調查研究需服務於研究問題，設計問卷時需注意中立性及有效性。避免情緒性字詞及引導性問題。  \n📌 **考點提醒**：社會期望偏誤（Social Desirability Bias）及其影響。\n\n### 七、觀察法\n- **定義**：在自然情境或控制情境中系統而有計畫地觀察個體行為。\n- **類型**：\n  - 結構式觀察：觀察特定行為及其出現次數。\n  - 非結構化觀察：開放性觀察，記錄多種行為。\n- **預測題型**：解釋名詞 5-10分 / 申論題 25分。\n\n## 重要考點\n1. **研究設計與資料分析的區別**：設計決定使用的研究方法，分析則決定使用的統計方法。\n2. **調查與觀察的不同**：調查是主觀表達，觀察是客觀記錄。\n\n## 一句話總結\n“量化研究方法透過系統的設計與精確的數據分析，揭示心理學現象的深層次關聯性。”\n\n### 實用記憶口訣\n- **調查**：我問你，結果一起來。\n- **觀察**：靜靜看，結果記下。\n\n這些結構化的筆記將有助於你在複習量化研究方法的時候，更有效地針對考試準備。", "2026-04-18 18-27-29.md": "# 諮商所入學考試備考筆記\n## 科目：輔導原理\n## 1. 考試題型概述\n- **選擇題**\n- **解釋名詞 (5-10分)**\n- **申論題 (25分)**\n\n### 🔥 考試重點分析\n在諮商所的考試中，通常會涉及到應用情境，學生需要能夠將心理學知識與理論應用於具體的個案中。\n\n### ⭐ 特別考頻學校\n- 國立北部大學 \n- 屏東教育大學\n- 台中教育大學\n\n## 2. 重要概念應用\n以下是一些可能的應用個案以及相關的心理學技術和方法：\n\n| 個案情境   | 應用理論/技術           | 注意事項                          |\n| ---------- | ------------------------ | --------------------------------- |\n| 學習障礙   | 行為療法、認知療法      | 針對學習策略的調整                |\n| 憂鬱症     | 認知行為療法、情感支持  | 開展個案管理和系統性輔導          |\n| 情緒問題   | 精神分析理論、遊戲治療  | 認識情緒背後的衝突和表現          |\n\n### 🔍 考點提醒\n- 在考試中，經常出現的會是針對個案的具體應用題，因此對於前述的每一種應用情境需熟悉理論和治療方法。\n\n## 3. 記憶法與口訣\n- **個案情境法**：將個案情境撰寫於卡片上，利用隨身攜帶的方式隨時複習。\n- **簡單口訣**：SORE (S: 情境, O: 目標, R: 方法, E: 須注意)\n\n## 4. 申論題預測與整合\n考生需準備好針對特定個案的輔導方案或治療計畫撰寫，其中可融合不同心理學流派的理念。例題：  \n「請解釋對於一名有學習困難且伴隨憂鬱症狀的學生，你將如何設計輔導方案？」\n\n## 5. 總結重點\n> \"心理學的應用在於幫助人們從多元的視角去理解與改善他們的心理狀態。\"\n\n本筆記旨在協助考生理解應用心理學的重要性，以及範圍和情境中的具體應用，讓學生準備好面對研究所入學考試的挑戰。", "2026-04-18 18-35-49.md": "# 敘事治療備考筆記\n## 科目：輔導原理\n## 1. 敘事治療概述\n敘事治療（Narrative Therapy）是一種後現代取向的心理治療方法，強調透過故事來解構與重構人們的經歷與自我認知。主要觀點有以下幾點：\n\n- 🔥 **人與問題是分開的**：人不是壞人，做錯事不等於個人的價值。\n- 🔥 **解構與重構**：透過分析與重組故事來促進自我理解。\n  \n| 理論要素          | 敘事治療特點                  | 傳統理論                      |\n|-------------------|-------------------------------|-------------------------------|\n| 人與問題的關係  | 分開對立，重視過程            | 相互依賴，常將個人價值與行為聯繫 |\n| 治療師角色        | 探索者，共同發現者            | 權威者，指導者                |\n| 問題處理方式      | 外化問題                      | 直接解決                      |\n\n## 2. 解構的意義\n解構是一個關鍵程序，透過將問題外化來幫助個案更清楚地認識自身的挑戰。\n\n- 📌 **解構步驟**：\n  1. **識別問題**：識別並確認問題的存在。\n  2. **將問題外化**：例如，對話中將「懶惰」具象化，將其放在空椅子上對話。\n  3. **重建自我價值**：讓個案認識到他們的人格與行為是分開的。\n\n## 3. 外化技術\n外化技術幫助個案不再將負面特質內化，常用的方式包括：\n\n- 🎯 **外化問句**：例如，將懶惰具象化並與之對話。\n- 💡 **以比喻引導**：透過比喻（如「人都會死」）讓個案超越限制，重新看待問題。\n\n## 4. 影域的應用\n影域（Affect）是透過具象化的方式，讓個案重新評估自己的情緒反應和內在對話。\n\n- ⭐ **影域的特點**：\n  - 用比喻型式思考問題，幫助個案看見其他視角。\n  - 常用於學術壓力輔導，如學術論文寫作問題。\n\n## 5. 常考學校與題型\n- 常考學校：教育大學系列、北師、師大、實踐、輔仁等。\n- 預測題型：\n  - 📌 選擇題：敘事治療的基本概念。\n  - 📌 解釋名詞（5-10分）：解釋解構與重構的意義。\n  - 🎯 申論題（25分）：針對外化技術的實際應用。\n\n## 記憶口訣\n- **用故事解構，是非非我分開**（解構: 問題與人分開，重建自我）。\n\n## 一句話總結\n「敘事治療的核心在於透過故事的力量，重新釐清個人的價值與行為之間的關係。」", "2026-04-18 18-54-25.md": "# 合作語言取向 (Linguistic Approach) 備考筆記\n## 科目：輔導原理\n## 一、概述\n🔥 **定義**：合作語言取向 (Linguistic Approach) 是一種後現代心理治療取向，強調社會建構和多元現實，這一理論的發展反映了人們對現實的多樣理解。\n\n📌 **重要性**：此取向特別關注於語言與對話如何在治療和理解中扮演關鍵角色。\n\n### 主要概念\n| 概念           | 說明                                                         |\n|----------------|--------------------------------------------------------------|\n| 多元現實        | 每個人對同一事物有不同的解釋，現實是社會共同建構的結果。                    |\n| Tocque椅子      | 在對話中，每位參與者都平等地表達自己的觀點，共同建構理解，非單方面的溝通。      |\n| 公開話         | 治療師與個案之間開放內心思考的過程，促進有效的對話與理解。                      |\n| 相互轉化       | 在治療過程中，治療師和個案互相影響與成長，個案的成就也促進治療師的成長。        |\n| 不確定性       | 治療過程中不會預設明確的結果，著重於個案在過程中的探索與建構自我世界。          |\n\n## 二、理論背景\n⭐ **歷史背景**：合作語言取向起源於後現代主義心理學，注重語言的功能以及如何透過對話而達成理解。\n\n🎯 **題型預測**：\n- 選擇題（例如，多元現實的定義是什麼？）\n- 解釋名詞 (5-10分，解釋Tocque椅子的概念)\n- 申論題 (25分，討論合作語言取向在心理治療中的應用和意義)\n\n### 特別考試偏好學校\n- 北師大學\n- 師範大學\n- 實踐大學\n- 輔仁大學\n\n## 三、重要議題與關鍵點\n### 1. 多元現實\n🧠 **記憶法**：想像色彩的多樣性，發現每個人對於同一顏色的不同看法。\n\n### 2. 對話與共創\n💡 **申論用**：對話不是單向的交流，而是彼此的了解與共同探索。在治療中，這種多元性的對話可以促進深入的理解。\n\n### 3. 不確定性\n🧠 **記憶法**：心理治療的路徑不是固定的，讓個案自由探索是治療的核心。\n\n## 四、結論\n🎯 **一句話總結**：合作語言取向強調透過對話和共同建構，讓心理治療成為一場雙向的探索之旅。\n\n## 五、個人發展與反思\n💡 **未來職涯**：期望學生們能夠不僅學習理論，更能在實踐中發展出屬於自己的治療風格，成為獨一無二的心理諮商師。\n\n## 六、結尾\n珍惜心理治療的每一次交流與探索，因為每一位個案都是獨特的，而你的成長和理解，正是在這樣的互動中得以實現。", "2026-04-18 19-15-07.md": "# 自我探索與導師的影響\n## 科目：輔導原理\n## 課程概述\n在此段錄音中，學生回憶起小學時期遇到的導師對自己成長過程的影響。這位導師不僅提供學術支持，更對學生的心理成長產生深遠的影響，引發對自我探索及心理學的興趣。\n\n---\n\n## 重要概念\n\n| 概念               | 解釋                                                      |\n|-------------------|---------------------------------------------------------|\n| 導師的影響       | 導師能夠發現學生的情感狀況，並提供必要的支持和引導。  |\n| 自我探索         | 透過回顧過去，了解自己的情感與需求，以促進心理成長。  |\n| 心理學派         | 諮商學生需了解不同的心理學派，如精神分析、薩提兒治療等。|\n\n---\n\n## 學習重點 🔥\n\n- 導師的角色對於學生的心靈成長極為重要，尤其在面對家庭壓力時。\n- 自我探索需建立在回顧與反思的基礎上，以了解自身的情感需求。\n- 理解不同心理學派的觀點，能有助於未來的職業發展。\n\n## 預測題型\n- **選擇題**：導師對學生成長的影響。\n- **解釋名詞 5-10分**：自我探索、心理學派。\n- **申論題 25分**：討論導師如何影響學生的心理成長與發展。\n\n---\n\n## 學校考試偏好\n- **特別關注學校**：教育大學系列、北師、師大、實踐、輔仁\n\n---\n\n## 記憶法 🧠\n- **「導師的陽光」**：想像導師像陽光，照耀在學生身上，幫助他們走出黑暗。\n\n---\n\n## 一句話總結 💡\n「每一位導師都是影響學生成長旅程中的光源，照亮他們探索自我的道路。」", "2026-04-18 20-58-14.md": "# 精神分析理論備考筆記\n## 科目：輔導原理\n## 📘 重要理論概述\n\n本章節將從精神分析的重要理論及其主要人物出發，包括佛洛伊德的精神分析、阿德勒的個體心理學、榮格的分析心理學與客體關係理論等。\n\n### 🔥 佛洛伊德的精神分析\n\n- **主要組成**  \n  | 組成部份 | 定義 | 原則 | 位置 |\n  |----------|------|------|------|\n  | 本我 (Id) | 利用慾望、需求 | 快樂原則 | 潛意識 |\n  | 自我 (Ego) | 現實的考量，調和本我需求 | 現實原則 | 意識與潛意識之間 |\n  | 超我 (Superego) | 道德規範，社會期望 | 道德原則 | 潛意識 |\n\n- **發展階段**  \n  | 階段名稱 | 年齡範圍 | 特徵 | 主要心理任務 |\n  |----------|----------|------|----------------|\n  | 口腔期 | 0-1歲 | 吸吮滿足 | 信任與不信任 |\n  | 肛門期 | 1-3歲 | 控制能力 | 自控與邊界設定 |\n  | 性類期 | 3-6歲 | 恋父戀母情結 | 性別認同 |\n  | 潛伏期 | 6-12歲 | 友誼與社交 | 同性友誼發展 |\n  | 生殖期 | 12-18歲 | 異性戀愛情 | 人際關係建立 |\n\n### ⭐ 阿德勒的個體心理學\n\n- **社會性原則**  \n  社會性心理學的重點在於人際關係對個體的影響，認為社會互動是苦樂的關鍵。\n\n- **自卑與超越**  \n  阿德勒強調每個人都有自卑感，而這種自卑感推動我們去超越。\n\n- **家庭星座**  \n  在輔導中分析個體在家庭中的出生順序如何影響其心理狀態。\n\n### 📌 榮格的分析心理學\n\n- **集體潛意識**  \n  每個人都擁有與生俱來的意識，產生共通的心理特徵。\n\n- **圓形 (Archetypes)**  \n  榮格提出的圓形包括：  \n  - **Persona**：社交面具  \n  - **Ani Ma**（男人中的陽剛）  \n  - **Ani Ma**（女人中的陰柔）\n\n### 💡 客體關係理論\n\n- **定義**  \n  客體關係理論聚焦於人際關係，及早期經驗如何影響成年後的關係建立。\n\n## 🎯 題型預測\n- **選擇題**：本我、自我與超我的定義及位置。\n- **解釋名詞**：戀父戀母情結、集體潛意識。\n- **申論題**：比較佛洛伊德與阿德勒的理論異同。\n\n## ⭐ 考試資訊\n- **特別愛考學校**：\n  - 教育大學系列與阿德勒相關的問題。\n  - 實踐大學對榮格心理學的考查。\n  - 師大與輔仁則涵蓋廣泛的精神分析理論。\n\n## 🧠 記憶方法\n- **口訣**：**佛羅的三個，我的主**：本我、超我、自我 = 幸福、道德現實。\n- **聯想記憶**：將每個發展階段與對應年齡作關聯，例如：口腔期（0-1歲）：嬰兒期的吸吮行為。\n\n## 🔑 一句話總結\n「精神分析理論提供了一種深入理解人類心理的視角，揭示了潛意識動力及早期經驗對個體發展的重要性。」", "2026-04-18 21-40-31-樊老師11mins.md": "# 課題關係理論與心理分析\n## 科目：輔導原理\n## 📝 主要概念\n\n### 課題關係理論\n- **定義**：研究人類與人或物之間的情感關係，特別是母嬰關係。\n- **重要學者**：Marlow與Klein。\n\n### Marlow的四個時期\n| 階段     | 說明                                        |\n|----------|---------------------------------------------|\n| 共生期   | 嬰兒與母親密切聯繫，(6-8個月)嬰兒依賴母親。|\n| 分離期   | 嬰兒開始探索世界，母親需適度放手，避免過分保護。|\n| 依附關係 | 嬰兒認識到母親的存在感，能夠自信探索外界。 |\n| 自我實現 | 嬰兒能夠獨立，接受母親的存在，開始上學。   |\n\n### Klein的理論\n- **好課題 vs 壞課題**：當母親滿足嬰兒需求，成為「好課題」；否則為「壞課題」。\n- **心理發展重視**：特別強調兩歲以前的學生與母親的互動。\n\n## 🔍 比較心理學理論\n\n### 精神分析 vs 個體心理學\n\n| 理論          | 精神分析                           | 個體心理學                         |\n|---------------|----------------------------------|----------------------------------|\n| 代表學者      | 佛洛伊德（Freud）                 | 阿德勒（Adler）                  |\n| 理論基礎      | 潛意識驅動，動機受本能影響        | 社會互動及個人生活經歷影響內在動力 |\n| 側重觀點      | 以為潛意識深層為焦點              | 著重社會環境與自我感知          |\n\n⭐ **常考**：北師、師大、教育大學系列對於Klein理論的考題特別喜愛。\n\n## 📚 申論題型預測\n- **解釋名詞（5-10分）**：課題關係理論的核心概念。\n- **申論題（25分）**：深入探討Klein的理論及其在心理治療中的應用。\n- **比較題（解釋兩者的不同，10-15分）**：精神分析與個體心理學的不同點。\n\n## 🧠 記憶法\n- 使用「共分依自」來記憶Marlow的四個時期：共生、分離、依附、自我實現。\n- Klein的好壞課題可以用「好壞」對應「滿足需求的母親」來連結。\n\n## 💡 申論開頭引用\n“心理學的理論不僅是知識，更是我們未來職涯的重要指導。”\n\n## 🎯 整體學習目標\n在學習心理學的過程中，要明白不同理論的內涵與應用，形成自己的理解及應用方式，以便在實務中發揮最大效用。同時，這將有助於提升從業者幫助他人的能力。\n\n## 最後總結\n學習心理學不僅是為了考試，更是為了在未來的輔導工作中能夠運用自己所學的理論，達到真正的幫助他人的目的。"};
+const FIRST_NOTE    = "2026-04-20 13-01-21-量化研究方法.md";
+
+const SUBJECT_ICONS = {
+  education:     "📊",
+  psychology:    "🧠",
+  counseling:    "💬",
+  english:       "📝",
+  uncategorized: "📄",
+};
+
+const SUBJECT_LABELS = {
+  education:     "教育研究法",
+  psychology:    "普通心理學",
+  counseling:    "輔導原理",
+  english:       "英文",
+  uncategorized: "未分類",
+};
+
+// ── Build sidebar ──
+function buildSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  SIDEBAR_DATA.forEach(subj => {
+    const div = document.createElement("div");
+    div.className = "sidebar-subject";
+    div.dataset.id = subj.id;
+    div.innerHTML = `
+      <div class="sidebar-subject-header" onclick="toggleSubject('${subj.id}')">
+        <div class="subject-icon icon-${subj.id}">${SUBJECT_ICONS[subj.id] || "📄"}</div>
+        <div class="subject-label">
+          <span class="subject-name">${subj.name}</span>
+          ${subj.sub ? `<span class="subject-sub">${subj.sub}</span>` : ""}
+        </div>
+        <span class="subject-toggle">▶</span>
+      </div>
+      <div class="sidebar-notes">
+        ${subj.notes.map(n => `
+          <a class="note-link" data-filename="${n.filename}" onclick="loadNote('${n.filename}', '${subj.id}', '${subj.name}')">
+            ${n.title}
+            ${n.date ? `<span class="note-date">${n.date}</span>` : ""}
+          </a>
+        `).join("")}
+      </div>
+    `;
+    sidebar.appendChild(div);
+  });
+}
+
+function toggleSubject(id) {
+  const el = document.querySelector(`.sidebar-subject[data-id="${id}"]`);
+  if (el) el.classList.toggle("open");
+}
+
+function loadNote(filename, subjectId, subjectName) {
+  document.querySelectorAll(".note-link").forEach(l => l.classList.remove("active"));
+  const link = document.querySelector(`.note-link[data-filename="${filename}"]`);
+  if (link) link.classList.add("active");
+
+  const md = NOTES_CONTENT[filename] || "（筆記內容載入失敗）";
+  const html = marked.parse(md);
+
+  document.getElementById("main").innerHTML = `
+    <div class="note-title-bar">
+      <span class="note-subject-tag ${subjectId}">${subjectName}</span>
+    </div>
+    <div class="content">${html}</div>
+    <div class="mindmap-section" id="mindmap-section">
+      <div class="mindmap-header">
+        <h2>📊 心智圖</h2>
+        <button class="mindmap-toggle" id="mindmap-toggle" onclick="toggleMindMap()">展開心智圖</button>
+      </div>
+      <div class="mindmap-wrap" id="mindmap-wrap" style="display:none;"></div>
+    </div>
+  `;
+  window.scrollTo(0, 0);
+
+  // Store current note md for mind map rendering
+  window._currentNoteMd = md;
+  window._mindmapRendered = false;
+}
+
+function toggleMindMap() {
+  const wrap   = document.getElementById("mindmap-wrap");
+  const btn    = document.getElementById("mindmap-toggle");
+  const hidden = wrap.style.display === "none";
+
+  if (hidden) {
+    wrap.style.display = "block";
+    btn.textContent = "收起心智圖";
+    if (!window._mindmapRendered) {
+      renderMindMap(window._currentNoteMd, wrap);
+      window._mindmapRendered = true;
+    }
+  } else {
+    wrap.style.display = "none";
+    btn.textContent = "展開心智圖";
+  }
+}
+
+function renderMindMap(mdContent, container) {
+  // Extract only headings for a clean mind map
+  const headingLines = mdContent.split("\n")
+    .filter(l => /^#{1,4}\s/.test(l.trim()))
+    .join("\n");
+
+  const { Transformer } = window.markmap;
+  const transformer = new Transformer();
+  const { root } = transformer.transform(headingLines || mdContent);
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.style.cssText = "width:100%;height:520px;";
+  container.innerHTML = "";
+  container.appendChild(svg);
+
+  const { Markmap } = window.markmap;
+  const mm = Markmap.create(svg, {
+    duration: 400,
+    maxWidth: 260,
+    paddingX: 16,
+    spacingVertical: 8,
+    spacingHorizontal: 80,
+  });
+  mm.setData(root);
+  mm.fit();
+}
+
+// ── Init ──
+buildSidebar();
+
+// Auto-open first subject and load first note
+if (SIDEBAR_DATA.length > 0) {
+  toggleSubject(SIDEBAR_DATA[0].id);
+}
+if (FIRST_NOTE) {
+  const firstSubj = SIDEBAR_DATA.find(s => s.notes.some(n => n.filename === FIRST_NOTE));
+  if (firstSubj) {
+    toggleSubject(firstSubj.id);
+    loadNote(FIRST_NOTE, firstSubj.id, firstSubj.name);
+  }
+}
+</script>
+</body>
+</html>
