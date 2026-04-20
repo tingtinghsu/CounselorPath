@@ -1,0 +1,8 @@
+.env
+study_site/
+01-mov/
+02-txt/
+03-notes/
+04-mp3/
+__pycache__/
+*.pyc
