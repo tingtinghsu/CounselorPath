@@ -43,54 +43,69 @@ def main():
     start_time = time.time()
     start_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # 檢查目錄
-    if not MOV_DIR.exists():
-        print(f"錯誤: {MOV_DIR} 目錄不存在")
-        sys.exit(1)
+    try:
+        # 檢查目錄
+        if not MOV_DIR.exists():
+            print(f"錯誤: {MOV_DIR} 目錄不存在")
+            sys.exit(1)
 
-    if not TXT_DIR.exists():
-        TXT_DIR.mkdir(parents=True, exist_ok=True)
+        if not TXT_DIR.exists():
+            TXT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # 安裝 whisper
-    install_whisper()
+        # 安裝 whisper
+        install_whisper()
 
-    # 找出所有媒體檔案
-    media_files = [f for f in MOV_DIR.iterdir()
-                   if f.is_file() and f.suffix.lower() in SUPPORTED_FORMATS]
+        # 找出所有媒體檔案
+        media_files = [f for f in MOV_DIR.iterdir()
+                       if f.is_file() and f.suffix.lower() in SUPPORTED_FORMATS]
 
-    if not media_files:
-        print(f"在 {MOV_DIR} 中找不到媒體檔案")
+        if not media_files:
+            print(f"在 {MOV_DIR} 中找不到媒體檔案")
+            sys.exit(0)
+
+        print(f"找到 {len(media_files)} 個媒體檔案")
+        print("💡 提示: 按 Ctrl+C 可隨時中斷轉錄")
+        print("-" * 50)
+
+        # 逐個轉錄
+        for media_file in sorted(media_files):
+            txt_file = TXT_DIR / f"{media_file.stem}.txt"
+
+            # 跳過已存在的檔案
+            if txt_file.exists():
+                print(f"⊘ 跳過 (已存在): {media_file.name}")
+                continue
+
+            # 轉錄
+            text = transcribe_file(media_file)
+
+            if text:
+                txt_file.write_text(text, encoding='utf-8')
+                print(f"✓ 完成: {media_file.name} → {txt_file.name}")
+            else:
+                print(f"✗ 失敗: {media_file.name}")
+
+        print("-" * 50)
+
+        # 計算花費時間
+        elapsed_time = time.time() - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+
+        print(f"轉錄完成! (花費時間: {minutes}分{seconds}秒)")
+
+    except KeyboardInterrupt:
+        print("\n" + "-" * 50)
+        print("⚠️  中斷: 用戶按下 Ctrl+C，轉錄已停止")
+
+        # 計算已經花費的時間
+        elapsed_time = time.time() - start_time
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+
+        print(f"已轉錄時間: {minutes}分{seconds}秒")
+        print("-" * 50)
         sys.exit(0)
-
-    print(f"找到 {len(media_files)} 個媒體檔案")
-    print("-" * 50)
-
-    # 逐個轉錄
-    for media_file in sorted(media_files):
-        txt_file = TXT_DIR / f"{media_file.stem}.txt"
-
-        # 跳過已存在的檔案
-        if txt_file.exists():
-            print(f"⊘ 跳過 (已存在): {media_file.name}")
-            continue
-
-        # 轉錄
-        text = transcribe_file(media_file)
-
-        if text:
-            txt_file.write_text(text, encoding='utf-8')
-            print(f"✓ 完成: {media_file.name} → {txt_file.name}")
-        else:
-            print(f"✗ 失敗: {media_file.name}")
-
-    print("-" * 50)
-
-    # 計算花費時間
-    elapsed_time = time.time() - start_time
-    minutes = int(elapsed_time // 60)
-    seconds = int(elapsed_time % 60)
-
-    print(f"轉錄完成! (花費時間: {minutes}分{seconds}秒)")
 
 if __name__ == "__main__":
     main()
