@@ -17,8 +17,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 import time
 
-# 自動載入同目錄下的 .env 檔案
-_env_file = Path(__file__).parent / ".env"
+# 自動載入根目錄下的 .env 檔案
+_env_file = Path(__file__).parent.parent / ".env"
 if _env_file.exists():
     try:
         from dotenv import load_dotenv
@@ -42,7 +42,7 @@ SYSTEM_PROMPT = """你是一位擁有30年教學經驗的補習班輔導老師�
 2. 善用 emoji 標記重要程度：🔥=必考、⭐=常考、📌=考點提醒、🧠=記憶法、🎯=題型預測、💡=申論用
 3. 重要概念用 Markdown 表格整理（如理論比較、人格結構、發展階段等）
 4. 每個主要章節標注預測題型（選擇題 / 解釋名詞 5-10分 / 申論題 25分）
-5. 標注哪些學校特別愛考（如：教育大學系列、北師、師大、實踐、輔仁等）
+5. 標注哪些學校特別愛考（如：教育大學系列、北師、師大、實踐、輔大等）
 6. 提供記憶口訣或聯想記憶法
 7. 最後提供「一句話總結」供申論開頭引用
 8. 重新整理邏輯架構，不要照單全收逐字稿順序
